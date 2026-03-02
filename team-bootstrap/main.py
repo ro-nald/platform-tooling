@@ -19,8 +19,9 @@ from typing import Optional
 
 import boto3
 import typer
+from lib.github import get_github_repo
 from botocore.exceptions import ClientError, NoCredentialsError
-from github import Github, GithubException
+from github import GithubException
 from rich import print
 from rich.console import Console
 from rich.table import Table
@@ -233,13 +234,6 @@ def configure_github(
     repo: Optional[str] = typer.Option(None, "--repo", help="GitHub 'owner/repo' (auto-detected from git remote if omitted)"),
 ):
     """Write CI variables and secrets to the team's GitHub repository."""
-    import os
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("[red]Error: GITHUB_TOKEN is not set.[/red]")
-        print("[yellow]Export it before running: export GITHUB_TOKEN=<your-token>[/yellow]")
-        raise typer.Exit(1)
-
     target_repo = _resolve_repo(repo)
 
     print(f"Reading SSM namespace [bold]{namespace}[/bold]...")
@@ -254,7 +248,7 @@ def configure_github(
         raise typer.Exit(1)
 
     try:
-        gh_repo = Github(token).get_repo(target_repo)
+        gh_repo = get_github_repo(target_repo)
 
         for name, value in [
             ("TF_STATE_BUCKET", state_bucket),

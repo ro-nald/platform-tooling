@@ -19,7 +19,7 @@ This project replaces those manual steps with idempotent, auditable CLI commands
 
 ### `setup-tf`
 
-Provisions an S3 bucket for Terraform remote state and registers the bucket name as a GitHub Actions variable. Handles the AWS `us-east-1` region special case and enforces consistent bucket naming (`<prefix>-tfstate-<env>`).
+Provisions and hardens an S3 bucket for Terraform remote state, then registers the bucket name as a GitHub Actions variable. Enforces consistent bucket naming (`<prefix>-tfstate-<env>`), handles the AWS `us-east-1` region special case, and idempotently re-applies all security settings on existing buckets.
 
 ### `team-bootstrap`
 
@@ -73,7 +73,12 @@ uv sync
 
 #### `backend` — Provision an S3 state bucket
 
-Creates the bucket if it does not exist, enables versioning, and blocks all public access.
+Creates the bucket if it does not exist, then idempotently applies the following security controls (re-applied on every run, even on existing buckets):
+
+- Public access block (all four settings)
+- HTTPS-only bucket policy (`aws:SecureTransport` deny)
+- SSE-S3 encryption at rest
+- Versioning
 
 ```bash
 uv run setup-tf/main.py backend <bucket-prefix> [env] [region]
