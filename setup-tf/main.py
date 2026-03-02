@@ -1,6 +1,5 @@
 import boto3
 import typer
-import sys
 from github import Github
 from botocore.exceptions import ClientError
 from rich import print
