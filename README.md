@@ -31,6 +31,25 @@ Reads shared-services outputs directly from AWS SSM Parameter Store and uses the
 
 ---
 
+## Workflow
+
+These two tools operate at different levels and are intended for different operators:
+
+- **`setup-tf`** is run once by a platform engineer to provision the shared S3 backend and register its name in CI. It is a prerequisite for everything else.
+- **`team-bootstrap`** is run by each engineering team to consume that platform and configure their own repository. It assumes `setup-tf` has already been run.
+
+The typical sequence is:
+
+```text
+Platform engineer          Team developer
+──────────────────         ──────────────────────────────
+setup-tf backend     →     team-bootstrap run
+setup-tf github            (reads SSM, writes backend.hcl,
+                            sets GitHub variables/secrets)
+```
+
+---
+
 ## Technologies
 
 | Category | Technology |
