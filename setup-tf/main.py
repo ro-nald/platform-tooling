@@ -40,6 +40,20 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
             VersioningConfiguration={"Status": "Enabled"},
         )
 
+        s3.put_bucket_encryption(
+            Bucket=bucket_name,
+            ServerSideEncryptionConfiguration={
+                "Rules": [
+                    {
+                        "ApplyServerSideEncryptionByDefault": {
+                            "SSEAlgorithm": "AES256",
+                        },
+                        "BucketKeyEnabled": True,
+                    }
+                ]
+            },
+        )
+
         s3.put_public_access_block(
             Bucket=bucket_name,
             PublicAccessBlockConfiguration={
