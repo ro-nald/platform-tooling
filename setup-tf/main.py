@@ -23,7 +23,18 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
                 CreateBucketConfiguration={"LocationConstraint": region},
             )
         print(f"✅ [green]Created bucket:[/green] {bucket_name}")
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "BucketAlreadyOwnedByYou":
+            print("ℹ️  [yellow]Bucket already exists and you own it — re-applying security settings.[/yellow]")
+        elif error_code == "BucketAlreadyExists":
+            print(f"❌ [red]Error:[/red] Bucket name '{bucket_name}' is already taken globally.")
+            raise typer.Exit(1)
+        else:
+            print(f"❌ [red]AWS Error:[/red] {e}")
+            raise typer.Exit(1)
 
+    try:
         s3.put_bucket_versioning(
             Bucket=bucket_name,
             VersioningConfiguration={"Status": "Enabled"},
@@ -39,17 +50,9 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
             },
         )
         print("🔒 [green]Security and versioning enabled.[/green]")
-
     except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code == "BucketAlreadyOwnedByYou":
-            print("ℹ️  [yellow]Bucket already exists and you own it.[/yellow]")
-        elif error_code == "BucketAlreadyExists":
-            print(f"❌ [red]Error:[/red] Bucket name '{bucket_name}' is already taken globally.")
-            raise typer.Exit(1)
-        else:
-            print(f"❌ [red]AWS Error:[/red] {e}")
-            raise typer.Exit(1)
+        print(f"❌ [red]AWS Error applying security settings:[/red] {e}")
+        raise typer.Exit(1)
 
 
 @app.command(name="backend", help="Provision the Terraform S3 state backend.")
