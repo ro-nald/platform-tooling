@@ -36,25 +36,8 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
             raise typer.Exit(1)
 
     try:
-        s3.put_bucket_versioning(
-            Bucket=bucket_name,
-            VersioningConfiguration={"Status": "Enabled"},
-        )
-
-        s3.put_bucket_encryption(
-            Bucket=bucket_name,
-            ServerSideEncryptionConfiguration={
-                "Rules": [
-                    {
-                        "ApplyServerSideEncryptionByDefault": {
-                            "SSEAlgorithm": "AES256",
-                        },
-                        "BucketKeyEnabled": True,
-                    }
-                ]
-            },
-        )
-
+        # Apply access controls first to close the window between bucket creation
+        # and hardening as quickly as possible.
         s3.put_public_access_block(
             Bucket=bucket_name,
             PublicAccessBlockConfiguration={
@@ -85,6 +68,25 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
                     }
                 ],
             }),
+        )
+
+        s3.put_bucket_encryption(
+            Bucket=bucket_name,
+            ServerSideEncryptionConfiguration={
+                "Rules": [
+                    {
+                        "ApplyServerSideEncryptionByDefault": {
+                            "SSEAlgorithm": "AES256",
+                        },
+                        "BucketKeyEnabled": True,
+                    }
+                ]
+            },
+        )
+
+        s3.put_bucket_versioning(
+            Bucket=bucket_name,
+            VersioningConfiguration={"Status": "Enabled"},
         )
         print("🔒 [green]Security and versioning enabled.[/green]")
     except ClientError as e:
