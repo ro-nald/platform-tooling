@@ -1,4 +1,5 @@
 import boto3
+import json
 import typer
 from github import Github
 from botocore.exceptions import ClientError
@@ -62,6 +63,28 @@ def bootstrap_s3_backend(bucket_name: str, region: str):
                 "BlockPublicPolicy": True,
                 "RestrictPublicBuckets": True,
             },
+        )
+
+        s3.put_bucket_policy(
+            Bucket=bucket_name,
+            Policy=json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "DenyNonTLS",
+                        "Effect": "Deny",
+                        "Principal": "*",
+                        "Action": "s3:*",
+                        "Resource": [
+                            f"arn:aws:s3:::{bucket_name}",
+                            f"arn:aws:s3:::{bucket_name}/*",
+                        ],
+                        "Condition": {
+                            "Bool": {"aws:SecureTransport": "false"},
+                        },
+                    }
+                ],
+            }),
         )
         print("🔒 [green]Security and versioning enabled.[/green]")
     except ClientError as e:
