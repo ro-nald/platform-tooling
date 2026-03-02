@@ -2,7 +2,7 @@
 
 A collection of tools to assist with platform usage and infrastructure maintenance.
 
-## CLI Tools
+## CLI Tools
 
 ### `setup-tf`
 Configures Terraform to provision an AWS S3 bucket which will be used to store Terraform state.
