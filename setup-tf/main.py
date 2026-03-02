@@ -1,9 +1,10 @@
 import boto3
 import json
 import typer
-from github import Github
 from botocore.exceptions import ClientError
 from rich import print
+
+from lib.github import get_github_repo
 
 app = typer.Typer()
 
@@ -123,19 +124,11 @@ def register_backend(
     Reads GITHUB_TOKEN from the environment — do not pass it on the command line.
     Example: uv run setup-tf/main.py github my-org/my-repo my-org dev
     """
-    import os
-
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("[red]Error: GITHUB_TOKEN environment variable is not set.[/red]")
-        print("[yellow]Export it before running: export GITHUB_TOKEN=<your-token>[/yellow]")
-        raise typer.Exit(1)
-
     bucket_name = f"{bucket_prefix}-tfstate-{env}"
     variable_name = f"TF_BACKEND_BUCKET_{env.upper()}"
 
     try:
-        repo = Github(token).get_repo(repo_name)
+        repo = get_github_repo(repo_name)
         print(f"🚀 Registering {bucket_name} to {repo_name} as {variable_name}...")
         repo.create_variable(variable_name, bucket_name)
         print("✅ [green]Successfully registered variable in GitHub![/green]")
