@@ -17,11 +17,11 @@ This project replaces those manual steps with idempotent, auditable CLI commands
 
 ## Tools
 
-### `setup-tf`
+### `backend-setup`
 
 Provisions and hardens an S3 bucket for Terraform remote state, then registers the bucket name as a GitHub Actions variable. Enforces consistent bucket naming (`<prefix>-tfstate-<env>`), handles the AWS `us-east-1` region special case, and idempotently re-applies all security settings on existing buckets.
 
-### `team-bootstrap`
+### `team-setup`
 
 Reads shared-services outputs directly from AWS SSM Parameter Store and uses them to:
 
@@ -35,16 +35,16 @@ Reads shared-services outputs directly from AWS SSM Parameter Store and uses the
 
 These two tools operate at different levels and are intended for different operators:
 
-- **`setup-tf`** is run once by a platform engineer to provision the shared S3 backend and register its name in CI. It is a prerequisite for everything else.
-- **`team-bootstrap`** is run by each engineering team to consume that platform and configure their own repository. It assumes `setup-tf` has already been run.
+- **`backend-setup`** is run once by a platform engineer to provision the shared S3 backend and register its name in CI. It is a prerequisite for everything else.
+- **`team-setup`** is run by each engineering team to consume that platform and configure their own repository. It assumes `backend-setup` has already been run.
 
 The typical sequence is:
 
 ```text
 Platform engineer          Team developer
 ──────────────────         ──────────────────────────────
-setup-tf backend     →     team-bootstrap run
-setup-tf github            (reads SSM, writes backend.hcl,
+backend-setup backend     →     team-setup run
+backend-setup github            (reads SSM, writes backend.hcl,
                             sets GitHub variables/secrets)
 ```
 
@@ -72,7 +72,7 @@ setup-tf github            (reads SSM, writes backend.hcl,
 - [uv](https://docs.astral.sh/uv/) installed
 - AWS credentials configured (environment variables, `~/.aws/credentials`, or an instance profile)
 - A `GITHUB_TOKEN` with `repo` scope exported in your shell (required for GitHub commands)
-- Terraform ≥ 1.10 (required only for `team-bootstrap check`)
+- Terraform ≥ 1.10 (required only for `team-setup check`)
 
 ---
 
@@ -88,7 +88,7 @@ uv sync
 
 ## Usage
 
-### setup-tf
+### backend-setup
 
 #### `backend` — Provision an S3 state bucket
 
@@ -100,7 +100,7 @@ Creates the bucket if it does not exist, then idempotently applies the following
 - Versioning
 
 ```bash
-uv run setup-tf/main.py backend <bucket-prefix> [env] [region]
+uv run backend-setup/main.py backend <bucket-prefix> [env] [region]
 ```
 
 | Argument | Default | Description |
@@ -113,10 +113,10 @@ The resulting bucket name follows the pattern `<bucket-prefix>-tfstate-<env>`.
 
 ```bash
 # Create my-org-tfstate-dev in us-east-1
-uv run setup-tf/main.py backend my-org
+uv run backend-setup/main.py backend my-org
 
 # Create my-org-tfstate-prod in eu-west-2
-uv run setup-tf/main.py backend my-org prod eu-west-2
+uv run backend-setup/main.py backend my-org prod eu-west-2
 ```
 
 #### `github` — Register the bucket name in GitHub Actions
@@ -124,17 +124,17 @@ uv run setup-tf/main.py backend my-org prod eu-west-2
 Writes the bucket name as a repository variable (`TF_BACKEND_BUCKET_<ENV>`), making it available to CI workflows without hardcoding.
 
 ```bash
-uv run setup-tf/main.py github <owner/repo> <bucket-prefix> <env>
+uv run backend-setup/main.py github <owner/repo> <bucket-prefix> <env>
 ```
 
 ```bash
 export GITHUB_TOKEN=<your-token>
-uv run setup-tf/main.py github my-org/my-repo my-org dev
+uv run backend-setup/main.py github my-org/my-repo my-org dev
 ```
 
 ---
 
-### team-bootstrap
+### team-setup
 
 All commands read AWS credentials from the environment and accept `SSM_NAMESPACE`, `TF_STATE_BUCKET`, and `AWS_REGION` as environment variables to avoid repeating them on every invocation.
 
@@ -150,7 +150,7 @@ export GITHUB_TOKEN=<your-token>
 Runs `init` then `configure-github` in one command. The recommended starting point for new teams.
 
 ```bash
-uv run team-bootstrap/main.py run --team-slug team-payments
+uv run team-setup/main.py run --team-slug team-payments
 ```
 
 #### `init` — Generate Terraform backend config
@@ -158,14 +158,14 @@ uv run team-bootstrap/main.py run --team-slug team-payments
 Writes `backend.hcl` with the team's unique, scoped state key. Optionally also writes `shared-services.auto.tfvars`.
 
 ```bash
-uv run team-bootstrap/main.py init \
+uv run team-setup/main.py init \
   --team-slug team-payments \
   --output-dir ./terraform
 ```
 
 ```bash
 # Also generate shared-services.auto.tfvars
-uv run team-bootstrap/main.py init \
+uv run team-setup/main.py init \
   --team-slug team-payments \
   --output-dir ./terraform \
   --generate-tfvars
@@ -191,7 +191,7 @@ Reads IAM role ARNs and other values from SSM and writes them to the team's GitH
 | `ECR_PUSH_ROLE_ARN` _(secret)_ | IAM role for ECR image pushes |
 
 ```bash
-uv run team-bootstrap/main.py configure-github --team-slug team-payments
+uv run team-setup/main.py configure-github --team-slug team-payments
 ```
 
 #### `check` — Verify prerequisites
@@ -199,7 +199,7 @@ uv run team-bootstrap/main.py configure-github --team-slug team-payments
 Checks AWS credentials are valid and that Terraform ≥ 1.10 is installed.
 
 ```bash
-uv run team-bootstrap/main.py check
+uv run team-setup/main.py check
 ```
 
 #### `show-outputs` — Inspect SSM parameters
@@ -207,7 +207,7 @@ uv run team-bootstrap/main.py check
 Displays all shared-services outputs published to the SSM namespace in a formatted table.
 
 ```bash
-uv run team-bootstrap/main.py show-outputs
+uv run team-setup/main.py show-outputs
 ```
 
 #### `status` — Show current bootstrap state
@@ -215,5 +215,5 @@ uv run team-bootstrap/main.py show-outputs
 Reports which generated files exist locally and whether the SSM namespace is reachable.
 
 ```bash
-uv run team-bootstrap/main.py status
+uv run team-setup/main.py status
 ```

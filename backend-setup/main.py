@@ -105,7 +105,7 @@ def bootstrap(
     Provision an S3 bucket for Terraform state.
 
     The bucket is named <bucket-prefix>-tfstate-<env>.
-    Example: uv run setup-tf/main.py backend my-org dev eu-west-2
+    Example: uv run backend-setup/main.py backend my-org dev eu-west-2
     """
     bucket_name = f"{bucket_prefix}-tfstate-{env}"
     bootstrap_s3_backend(bucket_name, region)
@@ -122,7 +122,7 @@ def register_backend(
     Write the S3 bucket name to a GitHub Actions repository variable.
 
     Reads GITHUB_TOKEN from the environment — do not pass it on the command line.
-    Example: uv run setup-tf/main.py github my-org/my-repo my-org dev
+    Example: uv run backend-setup/main.py github my-org/my-repo my-org dev
     """
     bucket_name = f"{bucket_prefix}-tfstate-{env}"
     variable_name = f"TF_BACKEND_BUCKET_{env.upper()}"
